@@ -9,6 +9,32 @@ Bagshui:AddComponent(function()
   -- Do-nothing function to be used when a setting doesn't have an update function.
   local function emptyFunction() end
 
+  --- Decide which side of the inventory window should receive the Settings menu.
+  --- This uses current screen-space frame bounds instead of the saved window anchor,
+  --- because the saved anchor can point away from the screen center after dragging.
+  function Inventory:UpdateSettingsMenuAnchor()
+    local menuXPoint = self.settings.windowAnchorXPoint
+
+    if self.uiFrame and self.uiFrame.GetLeft and self.uiFrame.GetRight then
+      local windowLeft = self.uiFrame:GetLeft()
+      local windowRight = self.uiFrame:GetRight()
+      local screenLeft = _G.UIParent:GetLeft()
+      local screenRight = _G.UIParent:GetRight()
+
+      if windowLeft and windowRight and screenLeft and screenRight then
+        local leftSpace = windowLeft - screenLeft
+        local rightSpace = screenRight - windowRight
+
+        -- The menu's X anchor is the opposite of the side it occupies:
+        -- TOPRIGHT attaches the menu's right edge to the window's left edge.
+        menuXPoint = (leftSpace >= rightSpace) and "RIGHT" or "LEFT"
+      end
+    end
+
+    self.lastSettingsAnchor = self.settings.windowAnchorYPoint .. menuXPoint
+    self.lastSettingsXOffset = BsSkin.menuShiftRight * (menuXPoint == "LEFT" and 1 or -1)
+  end
+
   --- Show the Inventory settings menu.
   ---@param menu table Menu table.
   function Inventory:OpenSettingsMenu(menu)
@@ -18,10 +44,7 @@ Bagshui:AddComponent(function()
       return
     end
 
-    -- This is where the menu should anchor, in theory. See comments on
-    -- Inventory:FixSettingsMenuPosition() for more.
-    self.lastSettingsAnchor = self.settings.windowAnchorYPoint .. self.settings.windowAnchorXPoint
-    self.lastSettingsXOffset = BsSkin.menuShiftRight * (self.settings.windowAnchorXPoint == "LEFT" and 1 or -1)
+    self:UpdateSettingsMenuAnchor()
 
     -- Special property
     Bagshui.menuFrame.bagshuiData.noFirstLevelRepositionNeeded = true
@@ -44,10 +67,9 @@ Bagshui:AddComponent(function()
   end
 
   --- The goal is to keep the settings menu anchored to the corner of the main window.
-  --- This is initially done naively by simply anchoring it to the opposite side of the window anchor.
-  --- Most of the time, it's probably ok, but if the window has been moved to the opposite side without changing
-  --- the anchor, the menu could be offscreen. This is addressed by a second pass where the menu is checked
-  --- to see if an X-adjustment would be necessary to bring it back onscreen. If so, move it to the other side.
+  --- The side is chosen from current frame bounds so it opens toward the center of the screen
+  --- instead of relying on the saved window anchor, which may no longer represent where the
+  --- window actually is.
   --- There's also a bug in Blizzard's ToggleDropDownMenu() where custom menu positions aren't truly respected,
   --- so we end up working around that here as well. It could probably be generalized into the
   --- `Bagshui:ToggleDropDownMenu()` hook by checking the menu frame's anchor as compared to what was desired,
@@ -61,6 +83,7 @@ Bagshui:AddComponent(function()
       local menu = _G.DropDownList1 -- Grab the dropdown menu reference.
 
       if not secondPass then
+        self:UpdateSettingsMenuAnchor()
         menu:ClearAllPoints()
         menu:SetPoint(
           self.lastSettingsAnchor,
@@ -73,26 +96,10 @@ Bagshui:AddComponent(function()
         -- Trigger second pass position check on next frame update.
         Bagshui:QueueClassCallback(self, self.FixSettingsMenuPosition, nil, nil, true)
       else
-        local positionChanged = false
-
-        -- Check to see if the Settings menu has been positioned offscreen horizontally
-        -- or is overlapping the Inventory window, and if so, move it to the other side.
-        if
-          (BsUtil.GetFrameOffscreenAmount(menu, "x") ~= 0)
-          or (
-            (menu:GetLeft() or 0) >= (self.uiFrame:GetLeft() or 0)
-            and (menu:GetRight() or 0) <= (self.uiFrame:GetRight() or 0)
-          )
-        then
-          self.lastSettingsAnchor = BsUtil.FlipAnchorPointComponent(self.lastSettingsAnchor, 2)
-          self.lastSettingsXOffset = -self.lastSettingsXOffset
-          positionChanged = true
-        end
-
         -- Vertical adjustment to keep the entire menu onscreen.
         local yOffset = BsUtil.GetFrameOffscreenAmount(menu, "y")
 
-        if positionChanged or yOffset ~= 0 then
+        if yOffset ~= 0 then
           menu:ClearAllPoints()
           menu:SetPoint(
             self.lastSettingsAnchor,
