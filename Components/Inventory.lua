@@ -726,7 +726,6 @@ Bagshui:AddComponent(function()
         self.searchTextSetFromEvent = true
         if string.len(arg2 or "") > 0 then
           self.ui.buttons.toolbar.search:Hide()
-          self:PositionSearchBox()
           self.ui.frames.searchBox:Show()
           self.ui.frames.searchBox:SetText(arg2)
         else

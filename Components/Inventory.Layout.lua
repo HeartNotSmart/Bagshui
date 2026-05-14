@@ -1438,7 +1438,7 @@ groupEdgeOffset
         local topLeftToolbarWidth = GetToolbarClusterWidth(self, "topLeftToolbar", "LEFT")
         local topRightToolbarWidth = GetToolbarClusterWidth(self, "topRightToolbar", "RIGHT")
         local topToolbarSpacing = (topLeftToolbarWidth > 0 and topRightToolbarWidth > 0)
-          and math.abs(BsSkin.toolbarSpacing)
+          and math.abs(BsSkin.toolbarGroupSpacing)
           or 0
         finalWindowWidth = math.max(
           finalWindowWidth,
