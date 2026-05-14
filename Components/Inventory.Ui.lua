@@ -508,7 +508,7 @@ Bagshui:AddComponent(function()
         end
       end
     )
-    frames.searchBox:SetPoint("BOTTOMLEFT", uiFrame, "TOPLEFT", BsSkin.inventoryWindowPadding, 0)
+    self:PositionSearchBox()
     frames.searchBox:Hide()
 
     -- Hide search box when empty.
@@ -950,7 +950,7 @@ Bagshui:AddComponent(function()
         texture = "Search",
         tooltipTitle = L.Toolbar_Search_TooltipTitle,
         tooltipText = string.format(L.Toolbar_Search_TooltipText, self.inventoryTypeLocalized),
-        xOffset = -BsSkin.toolbarGroupSpacing,
+        xOffset = -BsSkin.toolbarSpacing,
         onClick = function()
           _G.PlaySound("igMainMenuOptionCheckBoxOn")
           self.ui.buttons.toolbar.search:Hide() -- This relies on the `name` property of this button being "Search".
@@ -958,6 +958,7 @@ Bagshui:AddComponent(function()
             self.temporarilyShowWindowHeader = true
             self:ForceUpdateWindow()
           end
+          self:PositionSearchBox()
           self.ui.frames.searchBox:Show()
           self:UpdateToolbar()
           self.ui.frames.searchBox:SetFocus()
@@ -1583,6 +1584,35 @@ Bagshui:AddComponent(function()
       self:ClearSearch()
       self:CloseMenusAndClearFocuses()
       BsCatalog:Search(searchText)
+    end
+  end
+
+  --- Position the inventory search box outside the window and match its width
+  --- to the current inventory frame.
+  function Inventory:PositionSearchBox()
+    if not self.ui or not self.ui.frames or not self.ui.frames.searchBox or not self.uiFrame then
+      return
+    end
+
+    local searchBox = self.ui.frames.searchBox
+    searchBox:ClearAllPoints()
+    searchBox:SetWidth(self.uiFrame:GetWidth())
+
+    local frameTop = self.uiFrame:GetTop()
+    local frameBottom = self.uiFrame:GetBottom()
+    local screenTop = _G.UIParent:GetTop()
+    local screenBottom = _G.UIParent:GetBottom()
+
+    if
+      frameTop
+      and frameBottom
+      and screenTop
+      and screenBottom
+      and math.abs(frameBottom - screenBottom) >= math.abs(screenTop - frameTop)
+    then
+      searchBox:SetPoint("TOPLEFT", self.uiFrame, "BOTTOMLEFT", 0, 0)
+    else
+      searchBox:SetPoint("BOTTOMLEFT", self.uiFrame, "TOPLEFT", 0, 0)
     end
   end
 
