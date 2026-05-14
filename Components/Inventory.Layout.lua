@@ -478,6 +478,210 @@ Bagshui:AddComponent(function()
     end
   end
 
+  --- Return approximate dimensions for a row of groups using the same slot/group math as UpdateWindow().
+  ---@param rowGroups table[] Layout groups to measure.
+  ---@param maxColumns number Maximum item columns allowed in the row.
+  ---@param adjustedItemSlotSize number Scaled item slot size.
+  ---@param itemSlotMargin number Space around item slots.
+  ---@param groupPadding number Group padding.
+  ---@return number actualWidth
+  ---@return number actualHeight
+  ---@return number visibleGroupCount
+  ---@return number rowWidthInItems
+  function Inventory:GetLayoutRowDimensions(rowGroups, maxColumns, adjustedItemSlotSize, itemSlotMargin, groupPadding)
+    local numGroupsInRow = table.getn(rowGroups)
+    local totalItemsInRow = 0
+    local rowWidthInItems = 0
+    local rowHeightInItems = 1
+    local unshrinkableGroupCount = 0
+    local groupWidthsInItems = {}
+    local groupId
+
+    for columnNum = 1, numGroupsInRow do
+      groupId = rowGroups[columnNum].groupId
+      groupWidthsInItems[groupId] = self.groupItemCounts[groupId] or 0
+      totalItemsInRow = totalItemsInRow + groupWidthsInItems[groupId]
+    end
+
+    rowWidthInItems = totalItemsInRow
+
+    while rowWidthInItems > maxColumns do
+      rowHeightInItems = rowHeightInItems + 1
+      repeat
+        rowWidthInItems = 0
+        unshrinkableGroupCount = 0
+        for columnNum = 1, numGroupsInRow do
+          groupId = rowGroups[columnNum].groupId
+
+          if groupWidthsInItems[groupId] > 1 then
+            local newWidth = groupWidthsInItems[groupId] - 1
+            if self.groupItemCounts[groupId] / newWidth <= rowHeightInItems then
+              groupWidthsInItems[groupId] = newWidth
+            else
+              unshrinkableGroupCount = unshrinkableGroupCount + 1
+            end
+          else
+            unshrinkableGroupCount = unshrinkableGroupCount + 1
+          end
+          rowWidthInItems = rowWidthInItems + groupWidthsInItems[groupId]
+        end
+      until rowWidthInItems <= maxColumns or unshrinkableGroupCount >= numGroupsInRow
+    end
+
+    local actualWidth = 0
+    local visibleGroupCount = 0
+    for columnNum = 1, numGroupsInRow do
+      groupId = rowGroups[columnNum].groupId
+      if groupWidthsInItems[groupId] > 0 then
+        actualWidth = actualWidth
+          + (groupWidthsInItems[groupId] * (adjustedItemSlotSize + itemSlotMargin))
+          + itemSlotMargin
+          + (groupPadding * 2)
+        visibleGroupCount = visibleGroupCount + 1
+      end
+    end
+
+    if totalItemsInRow == 0 then
+      return 0, 0, visibleGroupCount, rowWidthInItems
+    end
+
+    return
+      actualWidth,
+      (rowHeightInItems * (adjustedItemSlotSize + itemSlotMargin)) + itemSlotMargin + (groupPadding * 2),
+      visibleGroupCount,
+      rowWidthInItems
+  end
+
+  --- Build a temporary layout for rendering visible groups in a smaller footprint.
+  --- Does not mutate the saved Structure profile layout.
+  ---@param maxColumns number Maximum item columns allowed by the window setting.
+  ---@param adjustedItemSlotSize number Scaled item slot size.
+  ---@param itemSlotMargin number Space around item slots.
+  ---@param groupPadding number Group padding.
+  ---@param groupXSpacing number Horizontal space between groups.
+  ---@param groupYSpacing number Vertical space between groups.
+  ---@return table renderLayout Temporary layout table.
+  function Inventory:BuildAutoCompactRenderLayout(
+    maxColumns,
+    adjustedItemSlotSize,
+    itemSlotMargin,
+    groupPadding,
+    groupXSpacing,
+    groupYSpacing
+  )
+    local visibleGroups = {}
+    local hideGroup
+    local groupId
+
+    for rowNum = 1, table.getn(self.layout) do
+      for columnNum = 1, table.getn(self.layout[rowNum]) do
+        groupId = self.layout[rowNum][columnNum].groupId
+        if groupId then
+          hideGroup = false
+          if self.groups[groupId] and self.groups[groupId].hide then
+            hideGroup = true
+            self.hasHiddenGroups = true
+          end
+
+          if not self.showHidden and hideGroup then
+            self.groupItemCounts[groupId] = self.highlightItemsInContainerLocked
+                and self:GetGroupItemCountForLayout(groupId, self.highlightItemsInContainerLocked)
+              or 0
+          else
+            self.groupItemCounts[groupId] = self:GetGroupItemCountForLayout(groupId)
+          end
+
+          if self.groupItemCounts[groupId] > 0 then
+            table.insert(visibleGroups, {
+              groupId = groupId,
+              name = self.layout[rowNum][columnNum].name,
+              sourceRowNum = rowNum,
+              sourceColumnNum = columnNum,
+            })
+          end
+        else
+          Bagshui:PrintWarning("Inventory update call should have forced resort!")
+        end
+      end
+    end
+
+    if table.getn(visibleGroups) == 0 then
+      return {}
+    end
+
+    local bestLayout
+    local bestArea
+    local bestWidth
+
+    for targetWidth = 1, maxColumns do
+      local candidateLayout = {}
+      local currentRow = {}
+
+      for groupNum = 1, table.getn(visibleGroups) do
+        local trialRow = {}
+        for currentRowGroupNum = 1, table.getn(currentRow) do
+          table.insert(trialRow, currentRow[currentRowGroupNum])
+        end
+        table.insert(trialRow, visibleGroups[groupNum])
+
+        local _, _, _, trialRowWidthInItems = self:GetLayoutRowDimensions(
+          trialRow,
+          targetWidth,
+          adjustedItemSlotSize,
+          itemSlotMargin,
+          groupPadding
+        )
+
+        if table.getn(currentRow) > 0 and trialRowWidthInItems > targetWidth then
+          table.insert(candidateLayout, currentRow)
+          currentRow = {}
+        end
+        table.insert(currentRow, visibleGroups[groupNum])
+      end
+
+      if table.getn(currentRow) > 0 then
+        table.insert(candidateLayout, currentRow)
+      end
+
+      local candidateWidth = 0
+      local candidateHeight = 0
+      local visibleRows = 0
+      for rowNum = 1, table.getn(candidateLayout) do
+        local rowWidth, rowHeight, visibleGroupCount = self:GetLayoutRowDimensions(
+          candidateLayout[rowNum],
+          maxColumns,
+          adjustedItemSlotSize,
+          itemSlotMargin,
+          groupPadding
+        )
+        if visibleGroupCount > 0 then
+          rowWidth = rowWidth + ((visibleGroupCount - 1) * groupXSpacing)
+          if rowWidth > candidateWidth then
+            candidateWidth = rowWidth
+          end
+          candidateHeight = candidateHeight + rowHeight
+          visibleRows = visibleRows + 1
+        end
+      end
+      if visibleRows > 1 then
+        candidateHeight = candidateHeight + ((visibleRows - 1) * groupYSpacing)
+      end
+
+      local candidateArea = candidateWidth * candidateHeight
+      if
+        not bestArea
+        or candidateArea < bestArea
+        or (candidateArea == bestArea and candidateWidth < bestWidth)
+      then
+        bestLayout = candidateLayout
+        bestArea = candidateArea
+        bestWidth = candidateWidth
+      end
+    end
+
+    return bestLayout
+  end
+
   --- Actually do the work of updating the UI.
   --- **Should not be called directly!** Use `Inventory:Update()` or `Inventory:ForceWindowUpdate()` to coordinate the process.
   ---
@@ -689,13 +893,25 @@ Bagshui:AddComponent(function()
       BsUtil.TableClear(self.groupWidthsInItems) -- Group width in items (actual count EXCEPT in Edit Mode, where 0 becomes 1 to force the group to be visible when empty).
       BsUtil.TableClear(self.actualGroupWidths) -- Group width in screen units.
 
+      local renderLayout = self.layout
+      if self.settings.autoCompactLayout and not self.editMode then
+        renderLayout = self:BuildAutoCompactRenderLayout(
+          maxColumns,
+          adjustedItemSlotSize,
+          itemSlotMargin,
+          groupPadding,
+          groupXSpacing,
+          groupYSpacing
+        )
+      end
+
       -- Groups are placed starting at the bottom of the main frame and working upwards.
       -- Since we're starting at the bottom of the window, we need to start at the last row of the layout table.
-      for rowNum = table.getn(self.layout), 1, -1 do
+      for rowNum = table.getn(renderLayout), 1, -1 do
         -- self:PrintDebug("ROW "..rowNum)
 
         -- Get the number of groups in this row.
-        numGroupsInRow = table.getn(self.layout[rowNum])
+        numGroupsInRow = table.getn(renderLayout[rowNum])
         -- Use that information to figure out the number of the end group.
         uiGroupNumEnd = uiGroupNumStart + numGroupsInRow - 1
 
@@ -718,7 +934,7 @@ Bagshui:AddComponent(function()
         -- be in order to fit all items within the maximum column count.
         totalItemsInRow = 0
         for columnNum = rowGroupStart, rowGroupEnd, rowGroupStep do
-          local groupId = self.layout[rowNum][columnNum].groupId
+          local groupId = renderLayout[rowNum][columnNum].groupId
 
           if groupId then
             hideGroup = false
@@ -771,7 +987,7 @@ Bagshui:AddComponent(function()
             rowWidthInItems = 0
             unshrinkableGroupCount = 0
             for columnNum = rowGroupStart, rowGroupEnd, rowGroupStep do
-              local groupId = self.layout[rowNum][columnNum].groupId
+              local groupId = renderLayout[rowNum][columnNum].groupId
 
               -- Shrink the group by 1, if possible.
               if self.groupWidthsInItems[groupId] > 1 then
@@ -805,7 +1021,7 @@ Bagshui:AddComponent(function()
           -- Calculate the actual group widths, which we need to know when we make the group frame visible.
           local totalActualGroupWidths = 0 -- Will be used to determine how wide the window needs to be.
           for columnNum = rowGroupStart, rowGroupEnd, rowGroupStep do
-            local group = self.layout[rowNum][columnNum]
+            local group = renderLayout[rowNum][columnNum]
 
             -- Make sure this group will be displayed before adding it to the totals.
             if self.groupWidthsInItems[group.groupId] > 0 or self.editMode then
@@ -854,7 +1070,7 @@ Bagshui:AddComponent(function()
           uiRowNum = uiRowNum + 1
 
           for columnNum = rowGroupStart, rowGroupEnd, rowGroupStep do
-            local groupId = self.layout[rowNum][columnNum].groupId
+            local groupId = renderLayout[rowNum][columnNum].groupId
 
             -- Ensure the group exists.
             self.ui:CreateGroup(uiGroupNum)
@@ -884,8 +1100,8 @@ Bagshui:AddComponent(function()
             if self.groupWidthsInItems[groupId] > 0 then
               -- Update info on the UI object.
               group.bagshuiData.groupId = groupId
-              group.bagshuiData.rowNum = rowNum
-              group.bagshuiData.columnNum = columnNum
+              group.bagshuiData.rowNum = renderLayout[rowNum][columnNum].sourceRowNum or rowNum
+              group.bagshuiData.columnNum = renderLayout[rowNum][columnNum].sourceColumnNum or columnNum
 
               -- Add the group to the window.
               self:ShowFrameInNextPosition(
@@ -938,7 +1154,7 @@ Bagshui:AddComponent(function()
                 -- Set text to group name, or a single space if the group name is empty.
                 -- The single space is necessary so that the height can be measured properly.
                 group.bagshuiData.text:SetText(
-                  string.len(self.layout[rowNum][columnNum].name or "") > 0 and self.layout[rowNum][columnNum].name
+                  string.len(renderLayout[rowNum][columnNum].name or "") > 0 and renderLayout[rowNum][columnNum].name
                     or " "
                 )
 
@@ -2324,4 +2540,3 @@ self.dockedInventory and self.dockedInventory.multiplePartialStacks
     end
   end
 end)
-
