@@ -313,6 +313,9 @@ Bagshui:LoadComponent(function()
     ["Toolbar_Hide_TooltipTitle"] = "不显示隐藏",
     ["Toolbar_Show_TooltipTitle"] = "显示隐藏",
     ["Toolbar_Show_TooltipText"] = "切换隐藏物品的显示。",
+    ["Toolbar_HideBagBar_TooltipTitle"] = "Hide Bag Slots",
+    ["Toolbar_ShowBagBar_TooltipTitle"] = "Show Bag Slots",
+    ["Toolbar_ShowBagBar_TooltipText"] = "Toggle the bag slot buttons in the bottom left.",
     ["Toolbar_Search_TooltipTitle"] = "搜索",
     ["Toolbar_Search_TooltipText"] = "过滤你的 %s 内容。"
       .. BS_NEWLINE

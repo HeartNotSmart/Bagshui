@@ -292,6 +292,9 @@ Bagshui:LoadComponent(function()
     ["Toolbar_Hide_TooltipTitle"] = "Don't Show Hidden",
     ["Toolbar_Show_TooltipTitle"] = "Show Hidden",
     ["Toolbar_Show_TooltipText"] = "Toggle display of hidden items.",
+    ["Toolbar_HideBagBar_TooltipTitle"] = "Hide Bag Slots",
+    ["Toolbar_ShowBagBar_TooltipTitle"] = "Show Bag Slots",
+    ["Toolbar_ShowBagBar_TooltipText"] = "Toggle the bag slot buttons in the bottom left.",
     ["Toolbar_Search_TooltipTitle"] = "Search",
     ["Toolbar_Search_TooltipText"] = "Filter the contents of your %s."
       .. BS_NEWLINE
