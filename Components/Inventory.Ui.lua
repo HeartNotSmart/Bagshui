@@ -508,11 +508,8 @@ Bagshui:AddComponent(function()
         end
       end
     )
-    frames.searchBox:SetPoint("TOPRIGHT", buttons.toolbar.resort, -BsSkin.toolbarGroupSpacing - 12, 2)
+    frames.searchBox:SetPoint("BOTTOMLEFT", uiFrame, "TOPLEFT", BsSkin.inventoryWindowPadding, 0)
     frames.searchBox:Hide()
-    buttons.toolbar.search.bagshuiData.toolbarReservedWidth = frames.searchBox:GetWidth()
-
-    table.insert(self.ui.ordering.topRightToolbar, frames.searchBox)
 
     -- Hide search box when empty.
     local oldOnEditFocusLost = frames.searchBox:GetScript("OnEditFocusLost")
@@ -935,6 +932,26 @@ Bagshui:AddComponent(function()
     tooltips.mini:Hide()
   end
 
+  --- Position the floating inventory search box outside the inventory window.
+  function Inventory:PositionSearchBox()
+    local searchBox = self.ui.frames.searchBox
+    if not searchBox then
+      return
+    end
+
+    searchBox:SetWidth(math.max(1, self.uiFrame:GetWidth() - (BsSkin.inventoryWindowPadding * 2)))
+    searchBox:ClearAllPoints()
+
+    local uiParentHeight = _G.UIParent:GetHeight()
+    local windowMidpoint = ((self.uiFrame:GetTop() or 0) + (self.uiFrame:GetBottom() or 0)) / 2
+
+    if windowMidpoint < (uiParentHeight / 2) then
+      searchBox:SetPoint("BOTTOMLEFT", self.uiFrame, "TOPLEFT", BsSkin.inventoryWindowPadding, 0)
+    else
+      searchBox:SetPoint("TOPLEFT", self.uiFrame, "BOTTOMLEFT", BsSkin.inventoryWindowPadding, 0)
+    end
+  end
+
   --- Creates the list of items stored in `self.toolbarAndMainMenuItems`, which is
   --- used to build both the main window toolbar and the main menu Actions list.
   function Inventory:PopulateToolbarAndMainMenuItems()
@@ -961,6 +978,7 @@ Bagshui:AddComponent(function()
             self.temporarilyShowWindowHeader = true
             self:ForceUpdateWindow()
           end
+          self:PositionSearchBox()
           self.ui.frames.searchBox:Show()
           self:UpdateToolbar()
           self.ui.frames.searchBox:SetFocus()
