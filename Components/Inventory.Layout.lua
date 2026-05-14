@@ -526,6 +526,12 @@ Bagshui:AddComponent(function()
           rowWidthInItems = rowWidthInItems + groupWidthsInItems[groupId]
         end
       until rowWidthInItems <= maxColumns or unshrinkableGroupCount >= numGroupsInRow
+
+      -- If every group is already at its minimum width, this row can't fit within
+      -- maxColumns. Stop measuring instead of looping forever.
+      if rowWidthInItems > maxColumns and unshrinkableGroupCount >= numGroupsInRow then
+        break
+      end
     end
 
     local actualWidth = 0
@@ -1004,6 +1010,13 @@ Bagshui:AddComponent(function()
               rowWidthInItems = rowWidthInItems + self.groupWidthsInItems[groupId]
             end
           until rowWidthInItems <= maxColumns or unshrinkableGroupCount >= numGroupsInRow
+
+          -- Failsafe for impossible rows: if there are more visible groups than
+          -- allowed columns, every group bottoms out at width 1 and can't shrink
+          -- any further.
+          if rowWidthInItems > maxColumns and unshrinkableGroupCount >= numGroupsInRow then
+            break
+          end
         end
 
         -- Is there anything to display on this row?
