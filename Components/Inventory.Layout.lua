@@ -49,7 +49,11 @@ Bagshui:AddComponent(function()
             totalWidth = totalWidth + math.abs(nextOffset)
           end
 
-          totalWidth = totalWidth + (widget.GetWidth and (widget:GetWidth() * widget:GetScale()) or 0)
+          local widgetWidth = widget.GetWidth and (widget:GetWidth() * widget:GetScale()) or 0
+          if widget.bagshuiData and widget.bagshuiData.toolbarReservedWidth then
+            widgetWidth = math.max(widgetWidth, widget.bagshuiData.toolbarReservedWidth * widget:GetScale())
+          end
+          totalWidth = totalWidth + widgetWidth
           hasVisibleWidget = true
         end
       end
@@ -830,10 +834,7 @@ Bagshui:AddComponent(function()
         or self.temporarilyShowWindowFooter
         or self.temporarilyShowBagBar
       )
-      local showBagBar = (
-        (self.settings.showBagBar and self.bagBarShown)
-        or self.temporarilyShowBagBar
-      )
+      local showBagBar = self.settings.showBagBar or self.temporarilyShowBagBar
 
       -- Reset hidden group and item tracking.
       self.hasHiddenGroups = false -- Updated in this function.
@@ -2443,13 +2444,13 @@ self.dockedInventory and self.dockedInventory.multiplePartialStacks
     -- Show/hide bag slots button.
     self:SetToolbarButtonState(
       toolbarButtons.showBagBar,
-      (self.settings.showBagBar or self.bagBarShown or self.temporarilyShowBagBar),
+      self.settings.showFooter or self.temporarilyShowBagBar,
       true,
-      self.bagBarShown or self.temporarilyShowBagBar,
+      self.settings.showBagBar or self.temporarilyShowBagBar,
       L.Toolbar_HideBagBar_TooltipTitle,
       L.Toolbar_ShowBagBar_TooltipTitle
     )
-    toolbarButtons.showBagBar:SetAlpha((self.bagBarShown or self.temporarilyShowBagBar) and 1 or 0.4)
+    toolbarButtons.showBagBar:SetAlpha((self.settings.showBagBar or self.temporarilyShowBagBar) and 1 or 0.4)
 
     -- Disenchant button.
     self:SetToolbarButtonState(
@@ -2480,7 +2481,7 @@ self.dockedInventory and self.dockedInventory.multiplePartialStacks
       self.alwaysShowUsageSummary
       and (
         not self.settings.showFooter
-        or (self.settings.showFooter and not (self.settings.showBagBar and self.bagBarShown))
+        or (self.settings.showFooter and not self.settings.showBagBar)
       )
     then
       if self.settings.showFooter then
