@@ -293,9 +293,10 @@ Bagshui:AddComponent(function()
       anchorPoint = "LEFT",
       anchorToFrame = header,
       anchorToPoint = "LEFT",
-      width = 16,
-      height = 16,
-      xOffset = 5,
+      width = 22,
+      height = 22,
+      textureInset = 3,
+      xOffset = 2,
       onClick = function()
         Bagshui:HideTooltips()
         self.ui.tooltips.mini:Hide()
@@ -537,7 +538,7 @@ Bagshui:AddComponent(function()
     ui.frames.status, ui.text.status = self.ui:CreateLabel(header)
     ui.text.status:SetText(" ")
     ui.frames.status:SetHeight(ui.text.status:GetHeight() + 2)
-    ui.frames.status:SetPoint("LEFT", buttons.toolbar.main, "RIGHT", BsSkin.toolbarSpacing, 0)
+    ui.frames.status:SetPoint("LEFT", buttons.toolbar.menu, "RIGHT", BsSkin.toolbarSpacing, 0)
     ui.frames.status:SetPoint("RIGHT", buttons.toolbar.search, "LEFT", -BsSkin.toolbarSpacing, 0)
     ui.frames.status:Show()
 
@@ -951,6 +952,9 @@ Bagshui:AddComponent(function()
         -- the `onClick` function below and `Inventory:Search()`.
         name = "Search",
         texture = "Search",
+        width = 22,
+        height = 22,
+        textureInset = 4,
         tooltipTitle = L.Toolbar_Search_TooltipTitle,
         tooltipText = string.format(L.Toolbar_Search_TooltipText, self.inventoryTypeLocalized),
         xOffset = -BsSkin.toolbarSpacing,
