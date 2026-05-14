@@ -274,6 +274,18 @@ Bagshui:AddComponent(function()
     button:SetWidth(buttonWidth)
     button:SetHeight(buttonOpts.height or buttonWidth)
 
+    -- Keep the layout/click target larger than the icon artwork when requested.
+    if buttonOpts.textureInset then
+      for _, textureName in ipairs(BS_UI_BUTTON_TEXTURES) do
+        local texture = button["Get" .. textureName .. "Texture"](button)
+        if texture then
+          texture:ClearAllPoints()
+          texture:SetPoint("TOPLEFT", button, "TOPLEFT", buttonOpts.textureInset, -buttonOpts.textureInset)
+          texture:SetPoint("BOTTOMRIGHT", button, "BOTTOMRIGHT", -buttonOpts.textureInset, buttonOpts.textureInset)
+        end
+      end
+    end
+
     -- Position.
     button:SetPoint(
       buttonOpts.anchorPoint or "RIGHT",

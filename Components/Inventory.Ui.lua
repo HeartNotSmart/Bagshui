@@ -293,9 +293,10 @@ Bagshui:AddComponent(function()
       anchorPoint = "LEFT",
       anchorToFrame = header,
       anchorToPoint = "LEFT",
-      width = 16,
-      height = 16,
-      xOffset = 5,
+      width = 22,
+      height = 22,
+      textureInset = 3,
+      xOffset = 2,
       onClick = function()
         Bagshui:HideTooltips()
         self.ui.tooltips.mini:Hide()
@@ -326,12 +327,22 @@ Bagshui:AddComponent(function()
       tooltipAnchorPoint = "",
     })
 
+    -- Search belongs to the left toolbar next to the main menu button.
+    local searchToolbarItem = self.toolbarAndMainMenuItems[1]
+    searchToolbarItem.parentFrame = header
+    searchToolbarItem.anchorPoint = "LEFT"
+    searchToolbarItem.anchorToFrame = buttons.toolbar.menu
+    searchToolbarItem.anchorToPoint = "RIGHT"
+    searchToolbarItem.tooltipSecondDelay = BS_TOOLTIP_DELAY_SECONDS.TOOLBAR_DEFAULT
+    searchToolbarItem.xOffset = BsSkin.toolbarSpacing
+    buttons.toolbar.search = ui:CreateIconButton(searchToolbarItem)
+
     -- Offline indicator.
     buttons.toolbar.offline = ui:CreateIconButton({
       name = "State",
       parentFrame = header,
       anchorPoint = "LEFT",
-      anchorToFrame = buttons.toolbar.menu,
+      anchorToFrame = buttons.toolbar.search,
       anchorToPoint = "RIGHT",
       xOffset = BsSkin.toolbarSpacing,
       onClick = function()
@@ -453,25 +464,27 @@ Bagshui:AddComponent(function()
     nextOffset = -BsSkin.toolbarGroupSpacing
     for i = table.getn(self.toolbarAndMainMenuItems), 1, -1 do
       local item = self.toolbarAndMainMenuItems[i]
-      item.parentFrame = header
-      item.anchorToFrame = nextAnchor
-      item.tooltipSecondDelay = BS_TOOLTIP_DELAY_SECONDS.TOOLBAR_DEFAULT
-      item.xOffset = item.xOffset or nextOffset
+      if item.id ~= "search" then
+        item.parentFrame = header
+        item.anchorToFrame = nextAnchor
+        item.tooltipSecondDelay = BS_TOOLTIP_DELAY_SECONDS.TOOLBAR_DEFAULT
+        item.xOffset = item.xOffset or nextOffset
 
-      local button = ui:CreateIconButton(item)
+        local button = ui:CreateIconButton(item)
 
-      -- The toolbar button is stored in buttons.toolbar with the first letter
-      -- of its name lowercased (button.toolbar.showHide instead of buttons.toolbar.ShowHide).
-      -- (item.id is set in InventoryUi:PopulateToolbarAndMainMenuItems()).
-      buttons.toolbar[item.id] = button
+        -- The toolbar button is stored in buttons.toolbar with the first letter
+        -- of its name lowercased (button.toolbar.showHide instead of buttons.toolbar.ShowHide).
+        -- (item.id is set in InventoryUi:PopulateToolbarAndMainMenuItems()).
+        buttons.toolbar[item.id] = button
 
-      nextAnchor = button
+        nextAnchor = button
 
-      -- Store special spacing directives so they can be read by Inventory:UpdateToolbarAnchoring().
-      if item.xOffset and item.xOffset ~= nextOffset then
-        table.insert(self.ui.ordering.topRightToolbar, item.xOffset)
+        -- Store special spacing directives so they can be read by Inventory:UpdateToolbarAnchoring().
+        if item.xOffset and item.xOffset ~= nextOffset then
+          table.insert(self.ui.ordering.topRightToolbar, item.xOffset)
+        end
+        table.insert(self.ui.ordering.topRightToolbar, button)
       end
-      table.insert(self.ui.ordering.topRightToolbar, button)
     end
 
     -- Search box (hidden until Search button is clicked).
@@ -537,17 +550,14 @@ Bagshui:AddComponent(function()
     ui.frames.status, ui.text.status = self.ui:CreateLabel(header)
     ui.text.status:SetText(" ")
     ui.frames.status:SetHeight(ui.text.status:GetHeight() + 2)
-    ui.frames.status:SetPoint("LEFT", buttons.toolbar.main, "RIGHT", BsSkin.toolbarSpacing, 0)
-    ui.frames.status:SetPoint("RIGHT", buttons.toolbar.search, "LEFT", -BsSkin.toolbarSpacing, 0)
+    ui.frames.status:SetPoint("LEFT", buttons.toolbar.search, "RIGHT", BsSkin.toolbarSpacing, 0)
     ui.frames.status:Show()
-
-    -- The last thing anchored to the leftmost right toolbar icon is the status text.
-    table.insert(self.ui.ordering.topRightToolbar, ui.frames.status)
 
     -- Left toolbar order, consumed by `Inventory:UpdateToolbarAnchoring()`
     -- to manage anchoring based on what is visible.
     self.ui.ordering.topLeftToolbar = {
       buttons.toolbar.menu,
+      buttons.toolbar.search,
       buttons.toolbar.offline,
       buttons.toolbar.error,
       buttons.toolbar.editMode,
@@ -680,10 +690,13 @@ Bagshui:AddComponent(function()
     frames.miniSpaceSummaryTop:SetParent(header)
     frames.miniSpaceSummaryTop:ClearAllPoints()
     frames.miniSpaceSummaryTop.bagshuiData.text:SetPoint("LEFT", frames.miniSpaceSummaryTop, "LEFT", 0, -1)
-    table.insert(self.ui.ordering.topLeftToolbar, 2, frames.miniSpaceSummaryTop)
+    table.insert(self.ui.ordering.topLeftToolbar, 3, frames.miniSpaceSummaryTop)
 
     -- Bottom right toolbar anchor.
     frames.bottomRightToolbarAnchor = _G.CreateFrame("Frame", nil, footer)
+    frames.bottomRightToolbarAnchor.bagshuiData = {
+      toolbarAnchorOnly = true,
+    }
     frames.bottomRightToolbarAnchor:SetHeight(25)
     frames.bottomRightToolbarAnchor:SetWidth(1)
     frames.bottomRightToolbarAnchor:SetPoint("RIGHT", footer, "RIGHT", 5, 0)
@@ -948,6 +961,9 @@ Bagshui:AddComponent(function()
         -- the `onClick` function below and `Inventory:Search()`.
         name = "Search",
         texture = "Search",
+        width = 22,
+        height = 22,
+        textureInset = 4,
         tooltipTitle = L.Toolbar_Search_TooltipTitle,
         tooltipText = string.format(L.Toolbar_Search_TooltipText, self.inventoryTypeLocalized),
         xOffset = -BsSkin.toolbarSpacing,
