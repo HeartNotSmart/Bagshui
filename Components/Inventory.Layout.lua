@@ -1369,8 +1369,14 @@ self.settings.showBagBar and (uiButtons.itemSlots[1].bagshuiData.originalSizeAdj
         uiFrames.footer:Hide()
       end
 
+      -- Store the content-driven width so toolbar updates can keep the frame
+      -- just wide enough for visible controls without forcing a fixed minimum.
+      self.windowContentWidth = finalWindowWidth
+
       -- We can finally size the window frame.
-      self.uiFrame:SetWidth(math.max(finalWindowWidth, BsSkin.inventoryWindowMinWidth))
+      self.uiFrame:SetWidth(
+        math.max(finalWindowWidth, BsSkin.inventoryWindowMinWidth or 0, BsSkin.inventoryWindowPadding * 2)
+      )
       self.uiFrame:SetHeight(finalWindowHeight)
 
       -- Set scale and anchor for docked frame.
@@ -2383,6 +2389,7 @@ self.dockedInventory and self.dockedInventory.multiplePartialStacks
     self:UpdateToolbarAnchoring("topLeftToolbar", "LEFT")
     self:UpdateToolbarAnchoring("topRightToolbar", "RIGHT")
     self:UpdateToolbarAnchoring("bottomRightToolbar", "RIGHT")
+    self:UpdateWindowWidthForVisibleControls()
 
     -- Disable unusable stuff in Edit Mode.
     local editModeState = self.editMode and "Disable" or "Enable"
@@ -2486,6 +2493,75 @@ self.dockedInventory and self.dockedInventory.multiplePartialStacks
         end -- Inner anchor finding loop.
       end
     end -- Widget iteration.
+  end
+
+  --- Keep the inventory window only as wide as the visible content and toolbars require.
+  --- This lets sparse inventories shrink below the old fixed skin minimum while still
+  --- leaving enough room for footer controls like the bag bar and Open Container button.
+  function Inventory:UpdateWindowWidthForVisibleControls()
+    if not self.uiFrame or self.dockTo then
+      return
+    end
+
+    local minWidth = math.max(BsSkin.inventoryWindowMinWidth or 0, BsSkin.inventoryWindowPadding * 2)
+
+    local function addToolbarMinimum(parentFrame, leftWidgets, rightWidgets, extraSpacing)
+      if not parentFrame or not parentFrame:IsShown() then
+        return
+      end
+
+      local parentLeft = parentFrame:GetLeft()
+      local parentRight = parentFrame:GetRight()
+      if not parentLeft or not parentRight then
+        return
+      end
+
+      local leftEdgeRight
+      local rightEdgeLeft
+
+      for _, widget in ipairs(leftWidgets or {}) do
+        if
+          type(widget) == "table"
+          and widget.IsShown
+          and widget:IsShown()
+          and widget.GetRight
+          and widget:GetRight()
+        then
+          leftEdgeRight = math.max(leftEdgeRight or parentLeft, widget:GetRight())
+        end
+      end
+
+      for _, widget in ipairs(rightWidgets or {}) do
+        if
+          type(widget) == "table"
+          and widget.IsShown
+          and widget:IsShown()
+          and widget.GetLeft
+          and widget:GetLeft()
+        then
+          rightEdgeLeft = math.min(rightEdgeLeft or parentRight, widget:GetLeft())
+        end
+      end
+
+      local leftWidth = leftEdgeRight and math.max(0, leftEdgeRight - parentLeft) or 0
+      local rightWidth = rightEdgeLeft and math.max(0, parentRight - rightEdgeLeft) or 0
+      minWidth = math.max(minWidth, leftWidth + rightWidth + (extraSpacing or 0))
+    end
+
+    addToolbarMinimum(
+      self.ui.frames.header,
+      self.ui.ordering.topLeftToolbar,
+      self.ui.ordering.topRightToolbar,
+      BsSkin.toolbarSpacing
+    )
+    addToolbarMinimum(
+      self.ui.frames.footer,
+      { self.ui.frames.bagBar, self.ui.frames.miniSpaceSummaryBottom },
+      self.ui.ordering.bottomRightToolbar,
+      BsSkin.toolbarSpacing
+    )
+
+    self.uiFrame:SetWidth(math.max(self.windowContentWidth or 0, minWidth))
   end
 
   --- It seems like the client doesn't always catch situations where frames move out from

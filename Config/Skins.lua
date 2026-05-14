@@ -96,8 +96,8 @@ Bagshui:LoadComponent(function()
       ---@type number Close button X coordinate shift for inventory windows only.
       closeButtonInventoryWindowXOffsetAdjustment = 0,
 
-      ---@type number Minimum inventory window width.
-      inventoryWindowMinWidth = 400,
+      ---@type number Minimum inventory window width. Set to 0 to use visible content and toolbar controls only.
+      inventoryWindowMinWidth = 0,
       ---@type number Inventory window padding.
       inventoryWindowPadding = 6,
       ---@type number Header/footer will be shifted up/down by this much relative to window padding.
