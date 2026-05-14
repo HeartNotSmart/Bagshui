@@ -32,9 +32,9 @@ Bagshui:AddComponent(function()
     for widgetPosition = 1, table.getn(widgetList) do
       local widget = widgetList[widgetPosition]
       if type(widget) == "table" and widget.IsShown and widget:IsShown() then
-        -- The first table in right-anchored toolbar lists is a 1px edge anchor,
-        -- not a visible control.
-        local isAnchorOnly = widgetPosition == 1 and anchorPoint == "RIGHT"
+        -- Some right-anchored toolbar lists start with a 1px edge anchor
+        -- instead of a visible control.
+        local isAnchorOnly = widget.bagshuiData and widget.bagshuiData.toolbarAnchorOnly
 
         if not isAnchorOnly then
           if hasVisibleWidget then

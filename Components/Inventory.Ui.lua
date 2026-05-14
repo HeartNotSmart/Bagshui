@@ -684,6 +684,9 @@ Bagshui:AddComponent(function()
 
     -- Bottom right toolbar anchor.
     frames.bottomRightToolbarAnchor = _G.CreateFrame("Frame", nil, footer)
+    frames.bottomRightToolbarAnchor.bagshuiData = {
+      toolbarAnchorOnly = true,
+    }
     frames.bottomRightToolbarAnchor:SetHeight(25)
     frames.bottomRightToolbarAnchor:SetWidth(1)
     frames.bottomRightToolbarAnchor:SetPoint("RIGHT", footer, "RIGHT", 5, 0)
