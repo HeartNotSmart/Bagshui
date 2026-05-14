@@ -12,6 +12,52 @@ Bagshui:AddComponent(function()
     groupItems = 2,
   }
 
+  --- Determine how much horizontal space a toolbar cluster needs based on the
+  --- same ordering tables used by Inventory:UpdateToolbarAnchoring().
+  ---@param inventory table Inventory class instance.
+  ---@param widgetOrderTable string Key in inventory.ui.ordering.
+  ---@param anchorPoint "LEFT"|"RIGHT"
+  ---@return number
+  local function GetToolbarClusterWidth(inventory, widgetOrderTable, anchorPoint)
+    local widgetList = inventory.ui.ordering[widgetOrderTable]
+    if not widgetList then
+      return 0
+    end
+
+    local invert = (anchorPoint == "RIGHT" and -1 or 1)
+    local defaultOffset = invert * BsSkin.toolbarSpacing
+    local totalWidth = 0
+    local hasVisibleWidget = false
+
+    for widgetPosition = 1, table.getn(widgetList) do
+      local widget = widgetList[widgetPosition]
+      if type(widget) == "table" and widget.IsShown and widget:IsShown() then
+        -- The first table in right-anchored toolbar lists is a 1px edge anchor,
+        -- not a visible control.
+        local isAnchorOnly = widgetPosition == 1 and anchorPoint == "RIGHT"
+
+        if not isAnchorOnly then
+          if hasVisibleWidget then
+            local nextOffset = defaultOffset + (widget.bagshuiData and widget.bagshuiData.autoLayoutXOffset or 0)
+            for anchorPosition = widgetPosition - 1, 1, -1 do
+              if type(widgetList[anchorPosition]) == "number" then
+                nextOffset = widgetList[anchorPosition]
+              elseif type(widgetList[anchorPosition]) == "table" and widgetList[anchorPosition].IsShown and widgetList[anchorPosition]:IsShown() then
+                break
+              end
+            end
+            totalWidth = totalWidth + math.abs(nextOffset)
+          end
+
+          totalWidth = totalWidth + (widget.GetWidth and (widget:GetWidth() * widget:GetScale()) or 0)
+          hasVisibleWidget = true
+        end
+      end
+    end
+
+    return totalWidth
+  end
+
   -- Reusable variable for use in `Inventory:Update()`.
   local update_cascadeInventory
 
@@ -784,6 +830,10 @@ Bagshui:AddComponent(function()
         or self.temporarilyShowWindowFooter
         or self.temporarilyShowBagBar
       )
+      local showBagBar = (
+        (self.settings.showBagBar and self.bagBarShown)
+        or self.temporarilyShowBagBar
+      )
 
       -- Reset hidden group and item tracking.
       self.hasHiddenGroups = false -- Updated in this function.
@@ -1320,7 +1370,7 @@ groupEdgeOffset
         uiFrames.main:SetPoint("BOTTOM", uiFrames.footer, "TOP", 0, 0)
 
         -- Show/hide Bag Bar and mini utilization summary.
-        if self.settings.showBagBar or self.temporarilyShowBagBar then
+        if showBagBar then
           uiFrames.bagBar:Show()
           self.ui.frames.miniSpaceSummaryBottom:Hide()
         else
@@ -1351,8 +1401,8 @@ groupEdgeOffset
         -- Determine footer height based on whether the bag bar is visible.
         local footerHeight = math.max(
           (
-                        -- Bag bar visible.
-self.settings.showBagBar and (uiButtons.itemSlots[1].bagshuiData.originalSizeAdjusted * bagBarScale)
+            -- Bag bar visible.
+            showBagBar and (uiButtons.itemSlots[1].bagshuiData.originalSizeAdjusted * bagBarScale)
             or 0
           ),
           BsSkin.inventoryHeaderFooterHeight
@@ -1363,14 +1413,66 @@ self.settings.showBagBar and (uiButtons.itemSlots[1].bagshuiData.originalSizeAdj
 
         -- Update window height.
         finalWindowHeight = finalWindowHeight + footerHeight + BsSkin.inventoryHeaderFooterYAdjustment
+
+        -- When visible, the bag bar belongs to the window's footprint even if
+        -- the item grid itself is narrower.
+        if showBagBar then
+          finalWindowWidth = math.max(
+            finalWindowWidth,
+            (uiFrames.bagBar:GetWidth() * uiFrames.bagBar:GetScale())
+              + (BsSkin.inventoryWindowPadding * 2)
+          )
+        end
       else
         -- When the footer is hidden, the main frame needs to anchor to the UI frame instead.
         uiFrames.main:SetPoint("BOTTOM", self.uiFrame, "BOTTOM", 0, BsSkin.inventoryWindowPadding)
         uiFrames.footer:Hide()
       end
 
+      -- Toolbar visibility and anchoring affect the minimum useful width, so
+      -- refresh those states before taking final measurements.
+      self:UpdateToolbar()
+
+      if showHeader then
+        local topLeftToolbarWidth = GetToolbarClusterWidth(self, "topLeftToolbar", "LEFT")
+        local topRightToolbarWidth = GetToolbarClusterWidth(self, "topRightToolbar", "RIGHT")
+        local topToolbarSpacing = (topLeftToolbarWidth > 0 and topRightToolbarWidth > 0)
+          and math.abs(BsSkin.toolbarGroupSpacing)
+          or 0
+        finalWindowWidth = math.max(
+          finalWindowWidth,
+          topLeftToolbarWidth
+            + topToolbarSpacing
+            + topRightToolbarWidth
+            + (BsSkin.inventoryWindowPadding * 2)
+        )
+      end
+
+      if showFooter then
+        local bottomLeftToolbarWidth = 0
+        if uiFrames.bagBar:IsShown() then
+          bottomLeftToolbarWidth = uiFrames.bagBar:GetWidth() * uiFrames.bagBar:GetScale()
+        elseif uiFrames.miniSpaceSummaryBottom:IsShown() then
+          bottomLeftToolbarWidth = uiFrames.miniSpaceSummaryBottom:GetWidth()
+            * uiFrames.miniSpaceSummaryBottom:GetScale()
+        end
+
+        local bottomRightToolbarWidth = GetToolbarClusterWidth(self, "bottomRightToolbar", "RIGHT")
+        local bottomToolbarSpacing = (bottomLeftToolbarWidth > 0 and bottomRightToolbarWidth > 0)
+          and math.abs(BsSkin.toolbarGroupSpacing)
+          or 0
+        finalWindowWidth = math.max(
+          finalWindowWidth,
+          bottomLeftToolbarWidth
+            + bottomToolbarSpacing
+            + bottomRightToolbarWidth
+            + (BsSkin.inventoryWindowPadding * 2)
+        )
+      end
+
       -- We can finally size the window frame.
-      self.uiFrame:SetWidth(math.max(finalWindowWidth, BsSkin.inventoryWindowMinWidth))
+      finalWindowWidth = math.max(finalWindowWidth, (BsSkin.inventoryWindowPadding * 2) + 1)
+      self.uiFrame:SetWidth(finalWindowWidth)
       self.uiFrame:SetHeight(finalWindowHeight)
 
       -- Set scale and anchor for docked frame.
@@ -2338,6 +2440,17 @@ self.dockedInventory and self.dockedInventory.multiplePartialStacks
       )
     )
 
+    -- Show/hide bag slots button.
+    self:SetToolbarButtonState(
+      toolbarButtons.showBagBar,
+      (self.settings.showBagBar or self.bagBarShown or self.temporarilyShowBagBar),
+      true,
+      self.bagBarShown or self.temporarilyShowBagBar,
+      L.Toolbar_HideBagBar_TooltipTitle,
+      L.Toolbar_ShowBagBar_TooltipTitle
+    )
+    toolbarButtons.showBagBar:SetAlpha((self.bagBarShown or self.temporarilyShowBagBar) and 1 or 0.4)
+
     -- Disenchant button.
     self:SetToolbarButtonState(
       toolbarButtons.disenchant,
@@ -2365,7 +2478,10 @@ self.dockedInventory and self.dockedInventory.multiplePartialStacks
     -- Utilization summaries.
     if
       self.alwaysShowUsageSummary
-      and (not self.settings.showFooter or (self.settings.showFooter and not self.settings.showBagBar))
+      and (
+        not self.settings.showFooter
+        or (self.settings.showFooter and not (self.settings.showBagBar and self.bagBarShown))
+      )
     then
       if self.settings.showFooter then
         self.ui.frames.miniSpaceSummaryBottom:Show()

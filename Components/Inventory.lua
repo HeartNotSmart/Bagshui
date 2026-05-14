@@ -228,6 +228,9 @@ Bagshui:AddComponent(function()
       disenchantButton = false,
       pickLockButton = false,
 
+      ---@type boolean Runtime state for the bottom-left bag bar toggle.
+      bagBarShown = false,
+
       ---@type string Default sound to play when window is opened.
       openSound = "igMainMenuOpen",
       ---@type string Default sound to play when window is closed.

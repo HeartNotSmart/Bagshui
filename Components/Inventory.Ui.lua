@@ -304,7 +304,10 @@ Bagshui:AddComponent(function()
       onEnter = function()
         _G.this.bagshuiData.overrideTooltip = (
           (not self.settings.showFooter and not self.alwaysShowUsageSummary)
-          or (self.settings.bagUsageDisplay ~= BS_INVENTORY_BAG_USAGE_DISPLAY.ALWAYS and not self.settings.showBagBar)
+          or (
+            self.settings.bagUsageDisplay ~= BS_INVENTORY_BAG_USAGE_DISPLAY.ALWAYS
+            and not (self.settings.showBagBar and self.bagBarShown)
+          )
         )
 
         if _G.this.bagshuiData.overrideTooltip then
@@ -838,12 +841,29 @@ Bagshui:AddComponent(function()
       end,
     })
 
+    -- Show/hide bag slots button.
+    buttons.toolbar.showBagBar = ui:CreateIconButton({
+      name = "ShowBagBar",
+      parentFrame = footer,
+      anchorPoint = "RIGHT",
+      anchorToFrame = buttons.toolbar.clam,
+      anchorToPoint = "LEFT",
+      texture = "Bags",
+      tooltipTitle = L.Toolbar_ShowBagBar_TooltipTitle,
+      tooltipText = L.Toolbar_ShowBagBar_TooltipText,
+      onClick = function()
+        _G.PlaySound("igMainMenuOptionCheckBox" .. (self.bagBarShown and "Off" or "On"))
+        self.bagBarShown = not self.bagBarShown
+        self:ForceUpdateWindow()
+      end,
+    })
+
     -- Disenchant button.
     buttons.toolbar.disenchant = ui:CreateIconButton({
       name = "Disenchant",
       parentFrame = footer,
       anchorPoint = "RIGHT",
-      anchorToFrame = buttons.toolbar.clam,
+      anchorToFrame = buttons.toolbar.showBagBar,
       anchorToPoint = "LEFT",
       disable = false,
       texture = "Disenchant",
@@ -879,6 +899,7 @@ Bagshui:AddComponent(function()
       buttons.toolbar.hearthstone,
       -BsSkin.toolbarGroupSpacing,
       buttons.toolbar.clam,
+      buttons.toolbar.showBagBar,
       buttons.toolbar.pickLock,
       buttons.toolbar.disenchant,
     }
@@ -1092,6 +1113,7 @@ Bagshui:AddComponent(function()
     self.expandEmptySlotStacks = false
     self.temporarilyShowWindowHeader = false
     self.highlightChanges = false
+    self.bagBarShown = false
     self.queuedTradeItem = nil -- Used by Inventory:TradeFrame_OnShow().
     self.itemPendingSale = nil -- Used by Inventory:ItemButton_OnClick() to confirm sale of protected items.
 
