@@ -2396,6 +2396,7 @@ self.dockedInventory and self.dockedInventory.multiplePartialStacks
       -- Don't need the offline character name in the tooltip normally.
       toolbarButtons.offline.bagshuiData.tooltipText = nil
     end
+    self.ui.frames.status:SetWidth(self.ui.text.status:GetWidth() + 2)
 
     -- Money frame.
     if self.settings.showMoney then
