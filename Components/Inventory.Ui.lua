@@ -306,7 +306,7 @@ Bagshui:AddComponent(function()
           (not self.settings.showFooter and not self.alwaysShowUsageSummary)
           or (
             self.settings.bagUsageDisplay ~= BS_INVENTORY_BAG_USAGE_DISPLAY.ALWAYS
-            and not (self.settings.showBagBar and self.bagBarShown)
+            and not self.settings.showBagBar
           )
         )
 
@@ -510,6 +510,7 @@ Bagshui:AddComponent(function()
     )
     frames.searchBox:SetPoint("TOPRIGHT", buttons.toolbar.resort, -BsSkin.toolbarGroupSpacing - 12, 2)
     frames.searchBox:Hide()
+    buttons.toolbar.search.bagshuiData.toolbarReservedWidth = frames.searchBox:GetWidth()
 
     table.insert(self.ui.ordering.topRightToolbar, frames.searchBox)
 
@@ -852,9 +853,8 @@ Bagshui:AddComponent(function()
       tooltipTitle = L.Toolbar_ShowBagBar_TooltipTitle,
       tooltipText = L.Toolbar_ShowBagBar_TooltipText,
       onClick = function()
-        _G.PlaySound("igMainMenuOptionCheckBox" .. (self.bagBarShown and "Off" or "On"))
-        self.bagBarShown = not self.bagBarShown
-        self:ForceUpdateWindow()
+        _G.PlaySound("igMainMenuOptionCheckBox" .. (self.settings.showBagBar and "Off" or "On"))
+        self.settings.showBagBar = not self.settings.showBagBar
       end,
     })
 
@@ -899,6 +899,7 @@ Bagshui:AddComponent(function()
       buttons.toolbar.hearthstone,
       -BsSkin.toolbarGroupSpacing,
       buttons.toolbar.clam,
+      -BsSkin.toolbarGroupSpacing,
       buttons.toolbar.showBagBar,
       buttons.toolbar.pickLock,
       buttons.toolbar.disenchant,
@@ -1113,7 +1114,6 @@ Bagshui:AddComponent(function()
     self.expandEmptySlotStacks = false
     self.temporarilyShowWindowHeader = false
     self.highlightChanges = false
-    self.bagBarShown = false
     self.queuedTradeItem = nil -- Used by Inventory:TradeFrame_OnShow().
     self.itemPendingSale = nil -- Used by Inventory:ItemButton_OnClick() to confirm sale of protected items.
 
