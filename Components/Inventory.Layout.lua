@@ -1270,10 +1270,30 @@ Bagshui:AddComponent(function()
         self.ui.text.noData:Hide()
       end
 
+      -- Measure the actual visible content bounds instead of deriving width from
+      -- the placement anchors. This prevents right-aligned layouts from carrying
+      -- forward empty space from the previous window width when the inventory
+      -- becomes sparse.
+      local contentLeft, contentRight
+      local function updateContentBounds(frame)
+        if frame and frame:IsShown() and frame:GetLeft() and frame:GetRight() then
+          contentLeft = math.min(contentLeft or frame:GetLeft(), frame:GetLeft())
+          contentRight = math.max(contentRight or frame:GetRight(), frame:GetRight())
+        end
+      end
+      for _, groupFrame in ipairs(uiFrames.groups) do
+        updateContentBounds(groupFrame)
+      end
+      if self.editMode then
+        for _, groupMoveTarget in ipairs(uiFrames.groupMoveTargets) do
+          updateContentBounds(groupMoveTarget)
+        end
+      end
+
       -- Calculate what we always know for width and height (header/footer are added next).
       finalWindowWidth =
         -- Inventory content.
-        ((firstFrame and widestRowLastFrame) and math.abs(firstFrame:GetRight() - widestRowLastFrame:GetLeft()) or 0)
+        (contentLeft and contentRight and math.abs(contentRight - contentLeft) or 0)
         -- Outer group margins.
         + groupEdgeOffset * 2
         -- Window padding.
