@@ -911,6 +911,7 @@ Bagshui:AddComponent(function()
       buttons.toolbar.clam,
       -BsSkin.toolbarGroupSpacing,
       buttons.toolbar.showBagBar,
+      -BsSkin.toolbarGroupSpacing,
       buttons.toolbar.pickLock,
       buttons.toolbar.disenchant,
     }
