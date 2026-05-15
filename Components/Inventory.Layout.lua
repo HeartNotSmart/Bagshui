@@ -2310,16 +2310,16 @@ self.hoveredItem._bagsRepresented
         -- Docked inventory needs resorting.
         self.dockedInventory and self.dockedInventory.enableResortIcon
       )
-    )
+    ) and true or false
     local restackVisible = (
       self.multiplePartialStacks
       or (
         -- Docked inventory needs restack.
         self.dockedInventory and self.dockedInventory.multiplePartialStacks
       )
-    )
-    local highlightChangesVisible = self.highlightChangesEnabled and not self.editMode
-    local characterVisible = table.getn(BsCharacterData.characterIdList) > 1
+    ) and true or false
+    local highlightChangesVisible = (self.highlightChangesEnabled and not self.editMode) and true or false
+    local characterVisible = (table.getn(BsCharacterData.characterIdList) > 1) and true or false
 
     -- Resort icon.
     self:SetToolbarButtonState(
@@ -2450,7 +2450,7 @@ self.hoveredItem._bagsRepresented
       and not Bagshui.components.Bank.atBank
       -- Avoid messing with item highlighting during a pending sale.
       and not self.itemPendingSale
-    )
+    ) and true or false
     self:SetToolbarButtonState(
       toolbarButtons.clam,
       clamVisible,
