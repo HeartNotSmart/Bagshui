@@ -1435,10 +1435,6 @@ Bagshui:LoadComponent(function()
     ["windowMaxColumns"] = "最大列数",
     ["windowMaxColumns_TooltipText"] = "窗口宽度限制为每行的物品数量。",
 
-    ["autoCompactLayout"] = "自动紧凑布局",
-    ["autoCompactLayout_TooltipTitle"] = "自动紧凑布局",
-    ["autoCompactLayout_TooltipText"] = "自动将可见组排列成多行，以减小背包窗口大小。编辑模式下禁用。",
-
     ["windowScale"] = "缩放",
     ["windowScale_TooltipTitle"] = "窗口缩放",
     ["windowScale_TooltipText"] = "整个窗口的相对大小。",

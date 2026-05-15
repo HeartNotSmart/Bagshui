@@ -668,6 +668,7 @@ Bagshui:AddComponent(function()
     local bestLayout
     local bestArea
     local bestWidth
+    local bestVisibleRows
 
     for targetWidth = 1, maxColumns do
       local candidateLayout = {}
@@ -727,11 +728,18 @@ Bagshui:AddComponent(function()
       if
         not bestArea
         or candidateArea < bestArea
-        or (candidateArea == bestArea and candidateWidth < bestWidth)
+        or (
+          candidateArea == bestArea
+          and (
+            visibleRows < bestVisibleRows
+            or (visibleRows == bestVisibleRows and candidateWidth < bestWidth)
+          )
+        )
       then
         bestLayout = candidateLayout
         bestArea = candidateArea
         bestWidth = candidateWidth
+        bestVisibleRows = visibleRows
       end
     end
 
@@ -951,7 +959,7 @@ Bagshui:AddComponent(function()
       BsUtil.TableClear(self.actualGroupWidths) -- Group width in screen units.
 
       local renderLayout = self.layout
-      if self.settings.autoCompactLayout and not self.editMode then
+      if not self.editMode then
         renderLayout = self:BuildAutoCompactRenderLayout(
           maxColumns,
           adjustedItemSlotSize,
@@ -2296,31 +2304,35 @@ self.hoveredItem._bagsRepresented
   --- Enable/disable/highlight toolbar buttons as appropriate.
   function Inventory:UpdateToolbar()
     local toolbarButtons = self.ui.buttons.toolbar
+    local resortVisible = (
+      self.enableResortIcon
+      or (
+        -- Docked inventory needs resorting.
+        self.dockedInventory and self.dockedInventory.enableResortIcon
+      )
+    )
+    local restackVisible = (
+      self.multiplePartialStacks
+      or (
+        -- Docked inventory needs restack.
+        self.dockedInventory and self.dockedInventory.multiplePartialStacks
+      )
+    )
+    local highlightChangesVisible = self.highlightChangesEnabled and not self.editMode
+    local characterVisible = table.getn(BsCharacterData.characterIdList) > 1
 
     -- Resort icon.
     self:SetToolbarButtonState(
       toolbarButtons.resort,
-      nil,
-      (
-        self.enableResortIcon
-        or (
-                    -- Docked inventory needs resorting.
-self.dockedInventory and self.dockedInventory.enableResortIcon
-        )
-      )
+      resortVisible,
+      resortVisible
     )
 
     -- Restack icon.
     self:SetToolbarButtonState(
       toolbarButtons.restack,
-      nil,
-      (
-        self.multiplePartialStacks
-        or (
-                    -- Docked inventory has needs restack.
-self.dockedInventory and self.dockedInventory.multiplePartialStacks
-        )
-      )
+      restackVisible,
+      restackVisible
     )
 
     -- Show/Hide icon.
@@ -2336,8 +2348,8 @@ self.dockedInventory and self.dockedInventory.multiplePartialStacks
     -- Highlight Changes icon.
     self:SetToolbarButtonState(
       toolbarButtons.highlightChanges,
-      nil,
-      self.highlightChangesEnabled and not self.editMode,
+      highlightChangesVisible,
+      highlightChangesVisible,
       self.highlightChanges,
       L.Toolbar_UnHighlightChanges_TooltipTitle,
       L.Toolbar_HighlightChanges_TooltipTitle
@@ -2346,8 +2358,8 @@ self.dockedInventory and self.dockedInventory.multiplePartialStacks
     -- Character icon.
     self:SetToolbarButtonState(
       toolbarButtons.character,
-      nil,
-      table.getn(BsCharacterData.characterIdList) > 1, -- Only enable when there's more than one character.
+      characterVisible,
+      characterVisible, -- Only enable/show when there's more than one character.
       self.activeCharacterId ~= Bagshui.currentCharacterId
     )
 
@@ -2428,18 +2440,21 @@ self.dockedInventory and self.dockedInventory.multiplePartialStacks
     end
 
     -- Clam (open container) button.
+    local clamVisible = (
+      self.clamButton
+      and self.settings.showClam
+      and self.hasOpenables
+      and not self.editMode
+      -- Don't allow at Bank because UseContainerItem() moves the item
+      -- instead of opening it.
+      and not Bagshui.components.Bank.atBank
+      -- Avoid messing with item highlighting during a pending sale.
+      and not self.itemPendingSale
+    )
     self:SetToolbarButtonState(
       toolbarButtons.clam,
-      (self.clamButton and self.settings.showClam or false),
-      (
-        self.hasOpenables
-        and not self.editMode
-        -- Don't allow at Bank because UseContainerItem() moves the item
-        -- instead of opening it.
-        and not Bagshui.components.Bank.atBank
-        -- Avoid messing with item highlighting during a pending sale.
-        and not self.itemPendingSale
-      )
+      clamVisible,
+      clamVisible
     )
 
     -- Show/hide bag slots button.
