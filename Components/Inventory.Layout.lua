@@ -668,6 +668,7 @@ Bagshui:AddComponent(function()
     local bestLayout
     local bestArea
     local bestWidth
+    local bestVisibleRows
 
     for targetWidth = 1, maxColumns do
       local candidateLayout = {}
@@ -727,11 +728,18 @@ Bagshui:AddComponent(function()
       if
         not bestArea
         or candidateArea < bestArea
-        or (candidateArea == bestArea and candidateWidth < bestWidth)
+        or (
+          candidateArea == bestArea
+          and (
+            visibleRows < bestVisibleRows
+            or (visibleRows == bestVisibleRows and candidateWidth < bestWidth)
+          )
+        )
       then
         bestLayout = candidateLayout
         bestArea = candidateArea
         bestWidth = candidateWidth
+        bestVisibleRows = visibleRows
       end
     end
 
@@ -951,7 +959,7 @@ Bagshui:AddComponent(function()
       BsUtil.TableClear(self.actualGroupWidths) -- Group width in screen units.
 
       local renderLayout = self.layout
-      if self.settings.autoCompactLayout and not self.editMode then
+      if not self.editMode then
         renderLayout = self:BuildAutoCompactRenderLayout(
           maxColumns,
           adjustedItemSlotSize,

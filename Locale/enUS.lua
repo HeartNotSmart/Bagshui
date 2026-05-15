@@ -1365,10 +1365,6 @@ Bagshui:LoadComponent(function()
     ["windowMaxColumns"] = "Maximum Columns",
     ["windowMaxColumns_TooltipText"] = "Window width limit in number of items per row.",
 
-    ["autoCompactLayout"] = "Auto-Compact Layout",
-    ["autoCompactLayout_TooltipTitle"] = "Auto-Compact Layout",
-    ["autoCompactLayout_TooltipText"] = "Automatically arrange visible groups into rows to reduce the inventory window size. Disabled in Edit Mode.",
-
     ["windowScale"] = "Scale",
     ["windowScale_TooltipTitle"] = "Window Scale",
     ["windowScale_TooltipText"] = "Relative size of entire window.",
