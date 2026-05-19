@@ -10,7 +10,6 @@
   <img width="917" height="474" alt="Bagshui Example" src="https://github.com/user-attachments/assets/a07211cb-c6d1-4f98-a9b5-4f8eab8f4577" />
 
 </picture><br>
-<a href="https://github.com/veechs/Bagshui/wiki/Screenshots">More Screenshots</a></h4>
 
 <a href="https://www.buymeacoffee.com/veechs" target="_blank"><img src="https://cdn.buymeacoffee.com/buttons/v2/default-orange.png" alt="Buy Me A Coffee" height="41" width="146"></a>
 
